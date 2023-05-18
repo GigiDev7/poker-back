@@ -92,6 +92,14 @@ const tableSchema = new mongoose.Schema({
     type: String,
     enum: ["call", "check", "raise", "fold", "all-in"],
   },
+  smallBlind: {
+    type: Number,
+    default: 50,
+  },
+  bigBlind: {
+    type: Number,
+    default: 100,
+  },
 });
 
 tableSchema.index({ tableId: 1 });
