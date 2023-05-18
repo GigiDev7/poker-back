@@ -77,9 +77,8 @@ const tableSchema = new mongoose.Schema({
     default: 0,
   },
   playerTurn: {
-    type: Number,
+    type: mongoose.Schema.Types.ObjectId,
     required: true,
-    default: 1,
   },
   cards: {
     type: [String],

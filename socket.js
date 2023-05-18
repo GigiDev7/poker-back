@@ -18,6 +18,7 @@ io.on("connection", (socket) => {
       const newTable = await Table.create({
         tableId,
         player1: { ...user, chipCount: 10000 },
+        playerTurn: user.id,
       });
     } else if (table && !table.player2.email) {
       table.player2 = { ...user, chipCount: 10000 };
