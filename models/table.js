@@ -28,7 +28,7 @@ const tableSchema = new mongoose.Schema({
     action: {
       actionType: {
         type: String,
-        enum: ["call", "check", "raise", "fold", "all-in"],
+        default: "",
       },
       actionChips: {
         type: Number,
@@ -63,7 +63,7 @@ const tableSchema = new mongoose.Schema({
     action: {
       actionType: {
         type: String,
-        enum: ["call", "check", "raise", "fold", "all-in"],
+        default: "",
       },
       actionChips: {
         type: Number,
@@ -77,8 +77,8 @@ const tableSchema = new mongoose.Schema({
     default: 0,
   },
   playerTurn: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
+    type: String,
+    default: "",
   },
   cards: {
     type: [String],
@@ -90,7 +90,7 @@ const tableSchema = new mongoose.Schema({
   },
   lastAction: {
     type: String,
-    enum: ["call", "check", "raise", "fold", "all-in"],
+    default: "",
   },
   smallBlind: {
     type: Number,
@@ -99,6 +99,13 @@ const tableSchema = new mongoose.Schema({
   bigBlind: {
     type: Number,
     default: 100,
+  },
+  gameIsFinished: {
+    type: Boolean,
+    default: false,
+  },
+  winner: {
+    type: String,
   },
 });
 
