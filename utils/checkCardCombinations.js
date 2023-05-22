@@ -1,4 +1,4 @@
-import { cardPriority } from "./cardCombinations.js";
+import { cardPriority, combinationPriority } from "./cardCombinations.js";
 import {
   countCardFrequency,
   helperLowStraight,
@@ -417,4 +417,40 @@ export const checkCardCombination = (playerCards, tableCards) => {
   return playerHand;
 };
 
-console.log(checkCardCombination(["AS", "KS"], ["3S", "4S", "AC", "AH", "3C"]));
+export const checkWinner = (player1, player2) => {
+  let winner = 0;
+
+  const player1Combination = player1.combination;
+  const player2Combination = player2.combination;
+
+  const player1CombPriority = combinationPriority[player1Combination];
+  const player2CombPriority = combinationPriority[player2Combination];
+
+  if (player1CombPriority < player2CombPriority) {
+    winner = 1;
+  } else if (player1CombPriority > player2CombPriority) {
+    winner = 2;
+  } else {
+    const player1Cards = player1.cards;
+    const player2Cards = player2.cards;
+    for (let i = 0; i < 5; i++) {
+      const player1C =
+        player1Cards.length === 3
+          ? player1Cards[i].slice(0, 2)
+          : player1Cards[i][0];
+      const player2C =
+        player2Cards.length === 3
+          ? player2Cards[i].slice(0, 2)
+          : player2Cards[i][0];
+      if (cardPriority[player1C] < cardPriority[player2C]) {
+        winner = 1;
+        break;
+      } else if (cardPriority[player1C] > cardPriority[player2C]) {
+        winner = 2;
+        break;
+      }
+    }
+  }
+
+  return winner;
+};

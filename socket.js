@@ -1,6 +1,10 @@
 import { Server } from "socket.io";
 import Table from "./models/table.js";
 import { generateCards, chooseRandomCard } from "./utils/cards.js";
+import {
+  checkCardCombination,
+  checkWinner,
+} from "./utils/checkCardCombinations.js";
 
 const cards = generateCards();
 
@@ -39,6 +43,8 @@ io.on("connection", (socket) => {
   socket.on("action", async (tableId, actionData, raiseChips) => {
     const table = await Table.findOne({ tableId });
 
+    let wasHandFinished = false;
+
     //fold
     if (actionData.action === "fold") {
       const playingCards = chooseRandomCard(cards, [], 7);
@@ -46,8 +52,6 @@ io.on("connection", (socket) => {
       table.player2.cards = [playingCards[2], playingCards[3]];
       table.cards = playingCards.slice(4);
       table.lastAction = "";
-      table.player1.action.actionType = "";
-      table.player2.action.actionType = "";
 
       if (table.playerTurn.toString() === table.player1.id.toString()) {
         table.playerTurn = table.player2.id;
@@ -75,13 +79,11 @@ io.on("connection", (socket) => {
     if (actionData.action === "all-in") {
       table.lastAction = "all-in";
       if (table.playerTurn.toString() === table.player1.id.toString()) {
-        table.player1.action.actionType = "all-in";
         table.player1.action.actionChips += table.player1.chipCount;
         table.pot += table.player1.chipCount;
         table.player1.chipCount = 0;
         table.playerTurn = table.player2.id;
       } else {
-        table.player2.action.actionType = "all-in";
         table.player2.action.actionChips += table.player2.chipCount;
         table.pot += table.player2.chipCount;
         table.player2.chipCount = 0;
@@ -91,7 +93,20 @@ io.on("connection", (socket) => {
 
     //call
     if (actionData.action === "call") {
-      if (table.lastAction === "all-in") {
+      if (!table.lastAction) {
+        table.lastAction = "call";
+        if (table.playerTurn.toString() === table.player1.id.toString()) {
+          table.playerTurn = table.player2.id;
+          table.player1.action.actionChips = table.bigBlind;
+          table.player1.chipCount -= table.bigBlind - table.smallBlind;
+          table.pot += table.bigBlind - table.smallBlind;
+        } else {
+          table.playerTurn = table.player1.id;
+          table.player2.action.actionChips = table.bigBlind;
+          table.player2.chipCount -= table.bigBlind - table.smallBlind;
+          table.pot += table.bigBlind - table.smallBlind;
+        }
+      } else if (table.lastAction === "all-in") {
         if (table.playerTurn.toString() === table.player1.id.toString()) {
           table.playerTurn = table.player2.id;
           if (
@@ -174,7 +189,58 @@ io.on("connection", (socket) => {
           table.cards.push(...resultCards);
         }
 
-        //check player combinations, declare winner if there is no chips available for any player
+        //finished one hand
+        wasHandFinished = true;
+
+        //check player combinations
+        const player1Hand = checkCardCombination(
+          table.player1.cards,
+          table.cards
+        );
+        const player2Hand = checkCardCombination(
+          table.player2.cards,
+          table.cards
+        );
+
+        const winner = checkWinner(player1Hand, player2Hand);
+
+        if (winner === 1) {
+          table.player1.chipCount += table.pot;
+          table.pot = 0;
+        } else if (winner === 2) {
+          table.player2.chipCount += table.pot;
+          table.pot = 0;
+        } else {
+          table.player1.chipCount += table.pot / 2;
+          table.player2.chipCount += table.pot / 2;
+        }
+
+        //declare winner if there is one
+        if (table.player1.chipCount === 0) {
+          table.winner = table.player2.id.toString();
+        } else if (table.player2.chipCount === 0) {
+          table.winner = table.player1.id.toString();
+        } else {
+          table.lastAction = "";
+          table.winner = "";
+          const resultCards = chooseRandomCard(cards, [], 7);
+          table.player1.cards = [resultCards[0], resultCards[1]];
+          table.player2.cards = [resultCards[2], resultCards[3]];
+          table.cards = resultCards.slice(4);
+          if (table.playerTurn.toString() === table.player1.id.toString()) {
+            table.player1.action.actionChips = table.smallBlind;
+            table.player2.action.actionChips = table.bigBlind;
+            table.player1.chipCount -= table.smallBlind;
+            table.player2.chipCount -= table.bigBlind;
+            table.pot = table.smallBlind + table.bigBlind;
+          } else {
+            table.player2.action.actionChips = table.smallBlind;
+            table.player1.action.actionChips = table.bigBlind;
+            table.player2.chipCount -= table.smallBlind;
+            table.player1.chipCount -= table.bigBlind;
+            table.pot = table.smallBlind + table.bigBlind;
+          }
+        }
       } else if (table.lastAction === "raise") {
         if (table.playerTurn.toString() === table.player1.id.toString()) {
           table.playerTurn = table.player2.id;
@@ -199,7 +265,59 @@ io.on("connection", (socket) => {
               );
               table.cards.push(...resultCards);
             }
-            //check player combinations, declare winner if there is no chips available for any player
+
+            //finished one hand
+            wasHandFinished = true;
+
+            //check player combinations, declare winner if there is no chips available for any player\//check player combinations
+            const player1Hand = checkCardCombination(
+              table.player1.cards,
+              table.cards
+            );
+            const player2Hand = checkCardCombination(
+              table.player2.cards,
+              table.cards
+            );
+
+            const winner = checkWinner(player1Hand, player2Hand);
+
+            if (winner === 1) {
+              table.player1.chipCount += table.pot;
+              table.pot = 0;
+            } else if (winner === 2) {
+              table.player2.chipCount += table.pot;
+              table.pot = 0;
+            } else {
+              table.player1.chipCount += table.pot / 2;
+              table.player2.chipCount += table.pot / 2;
+            }
+
+            //declare winner if there is one
+            if (table.player1.chipCount === 0) {
+              table.winner = table.player2.id.toString();
+            } else if (table.player2.chipCount === 0) {
+              table.winner = table.player1.id.toString();
+            } else {
+              table.lastAction = "";
+              table.winner = "";
+              const resultCards = chooseRandomCard(cards, [], 7);
+              table.player1.cards = [resultCards[0], resultCards[1]];
+              table.player2.cards = [resultCards[2], resultCards[3]];
+              table.cards = resultCards.slice(4);
+              if (table.playerTurn.toString() === table.player1.id.toString()) {
+                table.player1.action.actionChips = table.smallBlind;
+                table.player2.action.actionChips = table.bigBlind;
+                table.player1.chipCount -= table.smallBlind;
+                table.player2.chipCount -= table.bigBlind;
+                table.pot = table.smallBlind + table.bigBlind;
+              } else {
+                table.player2.action.actionChips = table.smallBlind;
+                table.player1.action.actionChips = table.bigBlind;
+                table.player2.chipCount -= table.smallBlind;
+                table.player1.chipCount -= table.bigBlind;
+                table.pot = table.smallBlind + table.bigBlind;
+              }
+            }
           } else {
             table.pot +=
               table.player2.action.actionChips -
@@ -211,7 +329,60 @@ io.on("connection", (socket) => {
             table.player2.action.actionChips = 0;
 
             if (table.cards.length === 5) {
+              //finished one hand
+              wasHandFinished = true;
               //check player combinations, start new hand
+              //check player combinations
+              const player1Hand = checkCardCombination(
+                table.player1.cards,
+                table.cards
+              );
+              const player2Hand = checkCardCombination(
+                table.player2.cards,
+                table.cards
+              );
+
+              const winner = checkWinner(player1Hand, player2Hand);
+
+              if (winner === 1) {
+                table.player1.chipCount += table.pot;
+                table.pot = 0;
+              } else if (winner === 2) {
+                table.player2.chipCount += table.pot;
+                table.pot = 0;
+              } else {
+                table.player1.chipCount += table.pot / 2;
+                table.player2.chipCount += table.pot / 2;
+              }
+
+              //declare winner if there is one
+              if (table.player1.chipCount === 0) {
+                table.winner = table.player2.id.toString();
+              } else if (table.player2.chipCount === 0) {
+                table.winner = table.player1.id.toString();
+              } else {
+                table.lastAction = "";
+                table.winner = "";
+                const resultCards = chooseRandomCard(cards, [], 7);
+                table.player1.cards = [resultCards[0], resultCards[1]];
+                table.player2.cards = [resultCards[2], resultCards[3]];
+                table.cards = resultCards.slice(4);
+                if (
+                  table.playerTurn.toString() === table.player1.id.toString()
+                ) {
+                  table.player1.action.actionChips = table.smallBlind;
+                  table.player2.action.actionChips = table.bigBlind;
+                  table.player1.chipCount -= table.smallBlind;
+                  table.player2.chipCount -= table.bigBlind;
+                  table.pot = table.smallBlind + table.bigBlind;
+                } else {
+                  table.player2.action.actionChips = table.smallBlind;
+                  table.player1.action.actionChips = table.bigBlind;
+                  table.player2.chipCount -= table.smallBlind;
+                  table.player1.chipCount -= table.bigBlind;
+                  table.pot = table.smallBlind + table.bigBlind;
+                }
+              }
             } else {
               const resultCards = chooseRandomCard(cards, [
                 ...table.cards,
@@ -244,7 +415,60 @@ io.on("connection", (socket) => {
               );
               table.cards.push(...resultCards);
             }
+
+            //finished one hand
+            wasHandFinished = true;
+
             //check player combinations, declare winner if there is no chips available for any player
+            //check player combinations
+            const player1Hand = checkCardCombination(
+              table.player1.cards,
+              table.cards
+            );
+            const player2Hand = checkCardCombination(
+              table.player2.cards,
+              table.cards
+            );
+
+            const winner = checkWinner(player1Hand, player2Hand);
+
+            if (winner === 1) {
+              table.player1.chipCount += table.pot;
+              table.pot = 0;
+            } else if (winner === 2) {
+              table.player2.chipCount += table.pot;
+              table.pot = 0;
+            } else {
+              table.player1.chipCount += table.pot / 2;
+              table.player2.chipCount += table.pot / 2;
+            }
+
+            //declare winner if there is one
+            if (table.player1.chipCount === 0) {
+              table.winner = table.player2.id.toString();
+            } else if (table.player2.chipCount === 0) {
+              table.winner = table.player1.id.toString();
+            } else {
+              table.lastAction = "";
+              table.winner = "";
+              const resultCards = chooseRandomCard(cards, [], 7);
+              table.player1.cards = [resultCards[0], resultCards[1]];
+              table.player2.cards = [resultCards[2], resultCards[3]];
+              table.cards = resultCards.slice(4);
+              if (table.playerTurn.toString() === table.player1.id.toString()) {
+                table.player1.action.actionChips = table.smallBlind;
+                table.player2.action.actionChips = table.bigBlind;
+                table.player1.chipCount -= table.smallBlind;
+                table.player2.chipCount -= table.bigBlind;
+                table.pot = table.smallBlind + table.bigBlind;
+              } else {
+                table.player2.action.actionChips = table.smallBlind;
+                table.player1.action.actionChips = table.bigBlind;
+                table.player2.chipCount -= table.smallBlind;
+                table.player1.chipCount -= table.bigBlind;
+                table.pot = table.smallBlind + table.bigBlind;
+              }
+            }
           } else {
             table.pot +=
               table.player1.action.actionChips -
@@ -256,7 +480,59 @@ io.on("connection", (socket) => {
             table.player1.action.actionChips = 0;
 
             if (table.cards.length === 5) {
+              wasHandFinished = true;
               //check combinations start new hand
+              //check player combinations
+              const player1Hand = checkCardCombination(
+                table.player1.cards,
+                table.cards
+              );
+              const player2Hand = checkCardCombination(
+                table.player2.cards,
+                table.cards
+              );
+
+              const winner = checkWinner(player1Hand, player2Hand);
+
+              if (winner === 1) {
+                table.player1.chipCount += table.pot;
+                table.pot = 0;
+              } else if (winner === 2) {
+                table.player2.chipCount += table.pot;
+                table.pot = 0;
+              } else {
+                table.player1.chipCount += table.pot / 2;
+                table.player2.chipCount += table.pot / 2;
+              }
+
+              //declare winner if there is one
+              if (table.player1.chipCount === 0) {
+                table.winner = table.player2.id.toString();
+              } else if (table.player2.chipCount === 0) {
+                table.winner = table.player1.id.toString();
+              } else {
+                table.lastAction = "";
+                table.winner = "";
+                const resultCards = chooseRandomCard(cards, [], 7);
+                table.player1.cards = [resultCards[0], resultCards[1]];
+                table.player2.cards = [resultCards[2], resultCards[3]];
+                table.cards = resultCards.slice(4);
+                if (
+                  table.playerTurn.toString() === table.player1.id.toString()
+                ) {
+                  table.player1.action.actionChips = table.smallBlind;
+                  table.player2.action.actionChips = table.bigBlind;
+                  table.player1.chipCount -= table.smallBlind;
+                  table.player2.chipCount -= table.bigBlind;
+                  table.pot = table.smallBlind + table.bigBlind;
+                } else {
+                  table.player2.action.actionChips = table.smallBlind;
+                  table.player1.action.actionChips = table.bigBlind;
+                  table.player2.chipCount -= table.smallBlind;
+                  table.player1.chipCount -= table.bigBlind;
+                  table.pot = table.smallBlind + table.bigBlind;
+                }
+              }
             } else {
               const resultCards = chooseRandomCard(cards, [
                 ...table.cards,
@@ -282,14 +558,64 @@ io.on("connection", (socket) => {
         }
         table.lastAction = "";
         if (table.cards.length === 5) {
+          wasHandFinished = true;
           //check card combinations start new hand
+          //check player combinations
+          const player1Hand = checkCardCombination(
+            table.player1.cards,
+            table.cards
+          );
+          const player2Hand = checkCardCombination(
+            table.player2.cards,
+            table.cards
+          );
+
+          const winner = checkWinner(player1Hand, player2Hand);
+
+          if (winner === 1) {
+            table.player1.chipCount += table.pot;
+            table.pot = 0;
+          } else if (winner === 2) {
+            table.player2.chipCount += table.pot;
+            table.pot = 0;
+          } else {
+            table.player1.chipCount += table.pot / 2;
+            table.player2.chipCount += table.pot / 2;
+          }
+
+          //declare winner if there is one
+          if (table.player1.chipCount === 0) {
+            table.winner = table.player2.id.toString();
+          } else if (table.player2.chipCount === 0) {
+            table.winner = table.player1.id.toString();
+          } else {
+            table.lastAction = "";
+            table.winner = "";
+            const resultCards = chooseRandomCard(cards, [], 7);
+            table.player1.cards = [resultCards[0], resultCards[1]];
+            table.player2.cards = [resultCards[2], resultCards[3]];
+            table.cards = resultCards.slice(4);
+            if (table.playerTurn.toString() === table.player1.id.toString()) {
+              table.player1.action.actionChips = table.smallBlind;
+              table.player2.action.actionChips = table.bigBlind;
+              table.player1.chipCount -= table.smallBlind;
+              table.player2.chipCount -= table.bigBlind;
+              table.pot = table.smallBlind + table.bigBlind;
+            } else {
+              table.player2.action.actionChips = table.smallBlind;
+              table.player1.action.actionChips = table.bigBlind;
+              table.player2.chipCount -= table.smallBlind;
+              table.player1.chipCount -= table.bigBlind;
+              table.pot = table.smallBlind + table.bigBlind;
+            }
+          }
         } else {
           const resultCards = chooseRandomCard(cards, [
             ...table.cards,
             ...table.player1.cards,
             ...table.player2.cards,
           ]);
-          table.push(resultCards[0]);
+          table.cards.push(resultCards[0]);
         }
       } else if (!table.lastAction) {
         if (table.playerTurn.toString() === table.player1.id.toString()) {
@@ -298,6 +624,21 @@ io.on("connection", (socket) => {
           table.playerTurn = table.player1.id;
         }
         table.lastAction = "check";
+      } else if (table.lastAction === "call") {
+        if (table.playerTurn.toString() === table.player1.id.toString()) {
+          table.playerTurn = table.player2.id;
+        } else {
+          table.playerTurn = table.player1.id;
+        }
+        const resultCards = chooseRandomCard(cards, [
+          ...table.cards,
+          ...table.player1.cards,
+          ...table.player2.cards,
+        ]);
+        table.player1.action.actionChips = 0;
+        table.player2.action.actionChips = 0;
+        table.cards.push(resultCards[0]);
+        table.lastAction = "";
       }
     }
 
@@ -325,6 +666,16 @@ io.on("connection", (socket) => {
     }
 
     await table.save();
-    io.to(tableId).emit("table-data", table);
+
+    if (!wasHandFinished) {
+      io.to(tableId).emit("table-data", table);
+    } else {
+      io.to(tableId).emit("finished-hand");
+      setTimeout(() => {
+        io.to(tableId).emit("table-data", table);
+      }, 2500);
+    }
+
+    wasHandFinished = false;
   });
 });
