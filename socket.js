@@ -40,7 +40,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("action", async (tableId, actionData, raiseChips) => {
+  socket.on("action", async (tableId, actionData) => {
     const table = await Table.findOne({ tableId });
 
     let wasHandFinished = false;
@@ -646,20 +646,22 @@ io.on("connection", (socket) => {
     if (actionData.action === "raise") {
       if (table.playerTurn.toString() === table.player1.id.toString()) {
         table.playerTurn = table.player2.id;
-        table.pot = table.pot - table.player1.action.actionChips + raiseChips;
+        table.pot =
+          table.pot - table.player1.action.actionChips + actionData.chips;
         table.player1.chipCount =
           table.player1.chipCount +
           table.player1.action.actionChips -
-          raiseChips;
-        table.player1.action.actionChips = raiseChips;
+          actionData.chips;
+        table.player1.action.actionChips = actionData.chips;
       } else {
         table.playerTurn = table.player1.id;
-        table.pot = table.pot - table.player2.action.actionChips + raiseChips;
+        table.pot =
+          table.pot - table.player2.action.actionChips + actionData.chips;
         table.player2.chipCount =
           table.player2.chipCount +
           table.player2.action.actionChips -
-          raiseChips;
-        table.player2.action.actionChips = raiseChips;
+          actionData.chips;
+        table.player2.action.actionChips = actionData.chips;
       }
 
       table.lastAction = "raise";
