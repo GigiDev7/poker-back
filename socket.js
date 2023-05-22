@@ -10,7 +10,7 @@ const cards = generateCards();
 
 const io = new Server(8888, {
   cors: {
-    origin: ["http://localhost:5173"],
+    origin: ["http://localhost:5173", "https://react-wsop.netlify.app"],
   },
 });
 
