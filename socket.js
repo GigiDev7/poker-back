@@ -8,7 +8,9 @@ import {
 
 const cards = generateCards();
 
-const io = new Server(8888, {
+const PORT = process.env.port || 8000;
+
+const io = new Server(PORT, {
   cors: {
     origin: ["http://localhost:5173", "https://react-wsop.netlify.app"],
     credentials: true,
