@@ -1,3 +1,4 @@
+import server from "./app.js";
 import { Server } from "socket.io";
 import Table from "./models/table.js";
 import { generateCards, chooseRandomCard } from "./utils/cards.js";
@@ -8,9 +9,7 @@ import {
 
 const cards = generateCards();
 
-const PORT = process.env.port || 8000;
-
-const io = new Server(PORT, {
+const io = new Server(server, {
   cors: {
     origin: ["http://localhost:5173", "https://react-wsop.netlify.app"],
     credentials: true,
