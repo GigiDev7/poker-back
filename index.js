@@ -21,6 +21,10 @@ app.use(
 app.use(cookieParser());
 app.use(express.json());
 
+app.get("/", (req, res) => {
+  res.send("works!");
+});
+
 app.use(userRouter);
 
 app.use(errorHandler);
