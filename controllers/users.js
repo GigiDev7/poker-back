@@ -5,7 +5,7 @@ const login = async (req, res, next) => {
     const data = await usersService.login(req.body.email, req.body.password);
     res.cookie("token", data.token, { httpOnly: true });
     res.cookie("user", JSON.stringify(data.user));
-    res.status(200).json(data.user);
+    res.status(200).json({ user: data.user, token: data.token });
   } catch (error) {
     next(error);
   }
