@@ -17,6 +17,7 @@ const io = new Server(server, {
 });
 
 io.on("connection", (socket) => {
+  console.log("user connected");
   socket.on("join", async (user, tableId) => {
     socket.join(tableId);
     const table = await Table.findOne({ tableId });
