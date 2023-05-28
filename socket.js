@@ -369,7 +369,7 @@ io.on("connection", (socket) => {
       io.to(tableId).emit("finished-hand");
       setTimeout(() => {
         io.to(tableId).emit("table-data", table);
-      }, 3000);
+      }, 5000);
     }
 
     wasHandFinished = false;
