@@ -39,7 +39,7 @@ io.on("connection", (socket) => {
       await table.save();
       io.to(tableId).emit("table-data", table);
     } else {
-      socket.to(tableId).emit("table-data", table);
+      io.to(tableId).emit("table-data", table);
     }
   });
 
