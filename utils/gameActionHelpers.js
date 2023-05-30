@@ -1,5 +1,5 @@
 import { chooseRandomCard, generateCards } from "./cards.js";
-import { checkCardCombination, checkWinner } from "./checkCardCombinations.js";
+import { checkWinner } from "./checkCardCombinations.js";
 
 const cards = generateCards();
 
@@ -29,11 +29,7 @@ export const freshHandStart = (table) => {
   table.pot = table.smallBlind + table.bigBlind;
 };
 
-export const checkHandsAndGetWinner = (table) => {
-  //check player combinations
-  const player1Hand = checkCardCombination(table.player1.cards, table.cards);
-  const player2Hand = checkCardCombination(table.player2.cards, table.cards);
-
+export const getWinner = (table, player1Hand, player2Hand) => {
   const winner = checkWinner(player1Hand, player2Hand);
 
   if (winner === 1) {

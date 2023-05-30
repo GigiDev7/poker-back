@@ -2,10 +2,8 @@ import server from "./app.js";
 import { Server } from "socket.io";
 import Table from "./models/table.js";
 import { generateCards, chooseRandomCard } from "./utils/cards.js";
-import {
-  checkHandsAndGetWinner,
-  freshHandStart,
-} from "./utils/gameActionHelpers.js";
+import { getWinner, freshHandStart } from "./utils/gameActionHelpers.js";
+import { checkCardCombination } from "./utils/checkCardCombinations.js";
 
 const cards = generateCards();
 
@@ -168,11 +166,25 @@ io.on("connection", (socket) => {
           );
           table.cards.push(...resultCards);
         }
+
+        const player1Hand = checkCardCombination(
+          table.player1.cards,
+          table.cards
+        );
+        const player2Hand = checkCardCombination(
+          table.player2.cards,
+          table.cards
+        );
+        table.player1.combination.combination = player1Hand.combination;
+        table.player1.combination.cards = player1Hand.cards;
+        table.player2.combination.combination = player2Hand.combination;
+        table.player2.combination.cards = player2Hand.cards;
+
         io.to(tableId).emit("table-data", table);
 
         //finished one hand
         wasHandFinished = true;
-        checkHandsAndGetWinner(table);
+        getWinner(table, player1Hand, player2Hand);
       } else if (table.lastAction === "raise") {
         if (table.playerTurn.toString() === table.player1.id.toString()) {
           table.playerTurn = table.player2.id;
@@ -198,11 +210,24 @@ io.on("connection", (socket) => {
               );
               table.cards.push(...resultCards);
             }
+
+            const player1Hand = checkCardCombination(
+              table.player1.cards,
+              table.cards
+            );
+            const player2Hand = checkCardCombination(
+              table.player2.cards,
+              table.cards
+            );
+            table.player1.combination.combination = player1Hand.combination;
+            table.player1.combination.cards = player1Hand.cards;
+            table.player2.combination.combination = player2Hand.combination;
+            table.player2.combination.cards = player2Hand.cards;
             io.to(tableId).emit("table-data", table);
 
             //finished one hand
             wasHandFinished = true;
-            checkHandsAndGetWinner(table);
+            getWinner(table, player1Hand, player2Hand);
           } else {
             table.pot +=
               table.player2.action.actionChips -
@@ -215,10 +240,24 @@ io.on("connection", (socket) => {
 
             if (table.cards.length === 5) {
               table.lastAction = "";
+
+              const player1Hand = checkCardCombination(
+                table.player1.cards,
+                table.cards
+              );
+              const player2Hand = checkCardCombination(
+                table.player2.cards,
+                table.cards
+              );
+              table.player1.combination.combination = player1Hand.combination;
+              table.player1.combination.cards = player1Hand.cards;
+              table.player2.combination.combination = player2Hand.combination;
+              table.player2.combination.cards = player2Hand.cards;
+
               io.to(tableId).emit("table-data", table);
               //finished one hand
               wasHandFinished = true;
-              checkHandsAndGetWinner(table);
+              getWinner(table, player1Hand, player2Hand);
             } else {
               const resultCards = chooseRandomCard(cards, [
                 ...table.cards,
@@ -252,11 +291,24 @@ io.on("connection", (socket) => {
               );
               table.cards.push(...resultCards);
             }
+
+            const player1Hand = checkCardCombination(
+              table.player1.cards,
+              table.cards
+            );
+            const player2Hand = checkCardCombination(
+              table.player2.cards,
+              table.cards
+            );
+            table.player1.combination.combination = player1Hand.combination;
+            table.player1.combination.cards = player1Hand.cards;
+            table.player2.combination.combination = player2Hand.combination;
+            table.player2.combination.cards = player2Hand.cards;
             io.to(tableId).emit("table-data", table);
 
             //finished one hand
             wasHandFinished = true;
-            checkHandsAndGetWinner(table);
+            getWinner(table, player1Hand, player2Hand);
           } else {
             table.pot +=
               table.player1.action.actionChips -
@@ -269,10 +321,23 @@ io.on("connection", (socket) => {
 
             if (table.cards.length === 5) {
               table.lastAction = "";
+              const player1Hand = checkCardCombination(
+                table.player1.cards,
+                table.cards
+              );
+              const player2Hand = checkCardCombination(
+                table.player2.cards,
+                table.cards
+              );
+              table.player1.combination.combination = player1Hand.combination;
+              table.player1.combination.cards = player1Hand.cards;
+              table.player2.combination.combination = player2Hand.combination;
+              table.player2.combination.cards = player2Hand.cards;
+
               io.to(tableId).emit("table-data", table);
 
               wasHandFinished = true;
-              checkHandsAndGetWinner(table);
+              getWinner(table, player1Hand, player2Hand);
             } else {
               const resultCards = chooseRandomCard(cards, [
                 ...table.cards,
@@ -299,10 +364,23 @@ io.on("connection", (socket) => {
         table.lastAction = "";
         if (table.cards.length === 5) {
           table.lastAction = "";
+          const player1Hand = checkCardCombination(
+            table.player1.cards,
+            table.cards
+          );
+          const player2Hand = checkCardCombination(
+            table.player2.cards,
+            table.cards
+          );
+          table.player1.combination.combination = player1Hand.combination;
+          table.player1.combination.cards = player1Hand.cards;
+          table.player2.combination.combination = player2Hand.combination;
+          table.player2.combination.cards = player2Hand.cards;
+
           io.to(tableId).emit("table-data", table);
 
           wasHandFinished = true;
-          checkHandsAndGetWinner(table);
+          getWinner(table, player1Hand, player2Hand);
         } else {
           const resultCards = chooseRandomCard(cards, [
             ...table.cards,
